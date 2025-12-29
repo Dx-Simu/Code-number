@@ -1,40 +1,57 @@
 const express = require('express');
 const axios = require('axios');
-const cors = require('cors');
 const fs = require('fs');
-const path = require('path');
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(cors());
 app.use(express.json());
 
-// Load data from files
-let logs = [];
-let bans = [];
-try {
-  logs = JSON.parse(fs.readFileSync('logs.json', 'utf8')) || [];
-  bans = JSON.parse(fs.readFileSync('bans.json', 'utf8')) || [];
-} catch (e) {
-  // Files not exist, start empty
-}
+const PORT = process.env.PORT || 3000;
+const BANS_FILE = 'bans.json';
+const LOGS_FILE = 'logs.json';
 
-// Save to files function
-const saveData = () => {
-  fs.writeFileSync('logs.json', JSON.stringify(logs, null, 2));
-  fs.writeFileSync('bans.json', JSON.stringify(bans, null, 2));
-};
+// Utility functions
+const readData = (file) => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file)) : [];
+const writeData = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
 
-// Save PID
-fs.writeFileSync('server.pid', process.pid.toString());
-
-// User request: log + check ban + get info
 app.post('/request', async (req, res) => {
-  const { username, num } = req.body;
-  if (!username || !num) return res.status(400).json({ error: 'Username and num required' });
+    const { username, num } = req.body;
+    
+    // Check Ban
+    const bans = readData(BANS_FILE);
+    if (bans.includes(username)) {
+        return res.json({ banned: true });
+    }
 
-  // Check ban
+    // Log Request
+    const logs = readData(LOGS_FILE);
+    logs.push({ username, num, time: new Date().toLocaleString() });
+    writeData(LOGS_FILE, logs);
+
+    try {
+        const apiKey = "vishalboss_key_77f340c6e486ccceb64e242279b2bc9eee2c826f";
+        const response = await axios.get(`https://numberimfo.vishalboss.sbs/api.php?number=${num}&key=${apiKey}`);
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: "API Error" });
+    }
+});
+
+// Admin Route: Ban User
+app.post('/admin/ban', (req, res) => {
+    const { username } = req.body;
+    let bans = readData(BANS_FILE);
+    if (!bans.includes(username)) {
+        bans.push(username);
+        writeData(BANS_FILE, bans);
+    }
+    res.json({ status: "success", message: `${username} banned.` });
+});
+
+// Admin Route: Get Logs
+app.get('/admin/logs', (req, res) => {
+    res.json(readData(LOGS_FILE));
+});
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));  // Check ban
   if (bans.some(b => b.username === username)) {
     return res.json({ banned: true });
   }
