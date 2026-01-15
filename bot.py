@@ -120,7 +120,7 @@ def verify(call):
     if is_subscribed(call.from_user.id):
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ", url=f"https://t.me/{bot.get_me().username}?startgroup=true"))
-        bot.edit_message_text("<b>ᴀᴅᴅᴇᴅ: ᴠᴇʀɪғɪᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b>\nʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴜsᴇ /ɴᴜᴍ ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘ.", call.message.chat.id, call.message.message_id, reply_markup=markup)
+        bot.edit_message_text("<b>ᴀᴅᴅᴇᴅ: ᴠᴇʀɪғɪᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b>\nʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴜsᴇ /num ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘ.", call.message.chat.id, call.message.message_id, reply_markup=markup)
     else:
         bot.answer_callback_query(call.id, "❌ ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ғɪʀsᴛ!", show_alert=True)
 
@@ -172,10 +172,10 @@ def info_fetch(message):
             response += f"📧 <b>ᴇᴍᴀɪʟ:</b> <code>{item.get('email') or 'N/A'}</code>\n"
             response += f"📍 <b>ᴀᴅᴅʀᴇss:</b> <code>{item.get('address') or 'N/A'}</code>\n"
             response += "━━━━━━━━━━━━━━━━━━\n"
-            response += f"<blockquote>ɴᴏᴛᴇ: ᴄᴏᴅᴇ–ɪɴꜰᴏ\nᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx\nsᴏᴜʀᴄᴇ: @ᴛᴇʀᴍᴜxᴄᴏᴅᴇx</blockquote>"
+            response += f"<blockquote>ɴᴏᴛᴇ: ᴄᴏᴅᴇ–ɪɴꜰᴏ\nᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx\nsᴏᴜʀᴄᴇ: @termuxcodex</blockquote>"
             
             # Send message with initial timer
-            footer = f"\n\n👤 𝖴𝗌𝖾𝗋: {mention_name}\n⏳ 𝖠𝗎𝗍𝗈 𝖣𝖾𝗅𝖾𝗍𝖾: 𝟦𝟢𝗌"
+            footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: 𝟦𝟢ꜱ"
             sent_msg = bot.send_message(message.chat.id, response + footer)
             
             # Start Countdown Thread
@@ -183,7 +183,7 @@ def info_fetch(message):
             time.sleep(1)
             
     except Exception as e:
-        bot.reply_to(message, f"<b>ᴀᴅᴅᴇᴅ: ᴀᴘɪ ᴇʀʀᴏʀ!</b>")
+        bot.reply_to(message, f"<b>ᴄᴏᴅᴇx: ᴇʀʀᴏʀ!</b>")
 
 # --- OWNER CONTROLS ---
 @bot.message_handler(commands=['id'], func=lambda m: m.from_user.id in OWNER_IDS)
