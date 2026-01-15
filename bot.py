@@ -26,9 +26,11 @@ def keep_alive():
 
 # --- CONFIGURATION & DATABASE ---
 TOKEN = "8522785774:AAGAan9a0iS0nQB7poDRsQ6SY33acLXdLrI"
+# Multiple Owners System
 OWNER_IDS = [6703335929, 6041728084] 
 CHANNEL_ID = "@alphacodex369" 
 GROUP_ID = "@CodexGroupTm"      
+# New API URL
 API_URL = "https://info-ekansh.vercel.app/api/number?num="
 
 # MongoDB Connection
@@ -45,17 +47,16 @@ bot_running = True
 # --- HELPERS ---
 def is_subscribed(user_id):
     try:
-        # Check Channel Status
+        # Fetch status for both Channel and Group
         status1 = bot.get_chat_member(CHANNEL_ID, user_id).status
-        # Check Group Status
         status2 = bot.get_chat_member(GROUP_ID, user_id).status
         
-        # Valid statuses to confirm user is in the chat
-        active_status = ['member', 'administrator', 'creator', 'restricted']
+        # Comprehensive list of valid statuses
+        valid_members = ['member', 'administrator', 'creator', 'restricted']
         
-        return (status1 in active_status) and (status2 in active_status)
+        return (status1 in valid_members) and (status2 in valid_members)
     except Exception as e:
-        print(f"Sub Check Error: {e}")
+        print(f"Join Check Error: {e}")
         return False
 
 def parse_broadcast_text(text):
@@ -178,9 +179,11 @@ def info_fetch(message):
             response += "━━━━━━━━━━━━━━━━━━\n"
             response += f"<blockquote>ɴᴏᴛᴇ: ᴄᴏᴅᴇ–ɪɴꜰᴏ\nᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx\nsᴏᴜʀᴄᴇ: @termuxcodex</blockquote>"
             
+            # Send message with initial timer
             footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: 𝟦𝟢ꜱ"
             sent_msg = bot.send_message(message.chat.id, response + footer)
             
+            # Start Countdown Thread
             threading.Thread(target=countdown_timer, args=(message.chat.id, sent_msg.message_id, response, mention_name)).start()
             time.sleep(1)
             
@@ -236,6 +239,6 @@ def owner_actions(message):
 if __name__ == "__main__":
     keep_alive()
     print("Bot is starting with Auto-Delete System...")
-    # Fix for Conflict 409 and Webhook issues
+    # Essential for Render to avoid Conflict 409
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True)
