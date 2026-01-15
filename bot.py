@@ -45,17 +45,11 @@ bot_running = True
 # --- HELPERS ---
 def is_subscribed(user_id):
     try:
-        # Check Channel Status
-        member_status1 = bot.get_chat_member(CHANNEL_ID, user_id).status
-        # Check Group Status
-        member_status2 = bot.get_chat_member(GROUP_ID, user_id).status
-        
-        # User must not be 'left' or 'kicked'
+        status1 = bot.get_chat_member(CHANNEL_ID, user_id).status
+        status2 = bot.get_chat_member(GROUP_ID, user_id).status
         allowed = ['member', 'administrator', 'creator', 'restricted']
-        return member_status1 in allowed and member_status2 in allowed
-    except Exception as e:
-        print(f"Subscription Check Error: {e}")
-        return False
+        return status1 in allowed and status2 in allowed
+    except: return False
 
 def parse_broadcast_text(text):
     pattern = r"\[([^|]+)\|([^\]]+)\]"
@@ -76,7 +70,7 @@ def countdown_timer(chat_id, message_id, original_text, mention_name):
         stylish_sec = str(sec).replace('0','𝟢').replace('1','𝟣').replace('2','𝟤').replace('3','𝟥').replace('4','𝟦').replace('5','𝟧')
         try:
             new_footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: {stylish_sec}𝗌"
-            bot.edit_message_text(original_text + new_footer, chat_id, message_id, parse_mode="HTML", disable_web_page_preview=True)
+            bot.edit_message_text(original_text + new_footer, chat_id, message_id, parse_mode="HTML")
         except:
             break
     
@@ -145,7 +139,6 @@ def info_fetch(message):
     user_data = users_col.find_one({"user_id": uid})
     now = time.time()
     
-    # Rate Limit Check
     if now - user_data.get('last_use', 0) < 3600 and user_data.get('usage_count', 0) >= 10:
         return bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʟɪᴍɪᴛ ᴇxᴄᴇᴇᴅᴇᴅ! ᴛʀʏ ᴀɢᴀɪɴ ᴀғᴛᴇʀ 1 ʜᴏᴜʀ.</b>")
     
@@ -158,8 +151,7 @@ def info_fetch(message):
 
     try:
         res = requests.get(f"{API_URL}{num}").json()
-        # Fixed the condition to handle different API responses
-        if not res.get("data") or not res['data'].get('result'):
+        if not res.get("success") or not res.get('data', {}).get('result'):
             return bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ɴᴏ ᴅᴀᴛᴀ ғᴏᴜɴᴅ!</b>")
         
         results = res['data']['result']
@@ -180,7 +172,7 @@ def info_fetch(message):
             response += f"<blockquote>ɴᴏᴛᴇ: ᴄᴏᴅᴇ–ɪɴꜰᴏ\nᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx\nsᴏᴜʀᴄᴇ: @termuxcodex</blockquote>"
             
             footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: 𝟦𝟢ꜱ"
-            sent_msg = bot.send_message(message.chat.id, response + footer, disable_web_page_preview=True)
+            sent_msg = bot.send_message(message.chat.id, response + footer)
             
             threading.Thread(target=countdown_timer, args=(message.chat.id, sent_msg.message_id, response, mention_name)).start()
             time.sleep(1)
@@ -210,8 +202,7 @@ def broadcast_manager(message):
     if not raw_text: return bot.reply_to(message, "<b>ᴜsᴀɢᴇ:</b> /broadcast ᴛᴇxᴛ [ʙᴛɴ ɴᴀᴍᴇ | URL]")
 
     clean_msg, markup = parse_broadcast_text(raw_text)
-    users = users_col.find()
-    groups = groups_col.find()
+    users = users_col.find(); groups = groups_col.find()
     count = 0
     for u in users:
         try: bot.send_message(u['user_id'], clean_msg, reply_markup=markup); count += 1
@@ -225,14 +216,9 @@ def broadcast_manager(message):
 def owner_actions(message):
     global bot_running
     cmd = message.text.split()
-    if '/stop' in message.text: 
-        bot_running = False
-        bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʙᴏᴛ sᴛᴏᴘᴘᴇᴅ.</b>")
-    elif '/run' in message.text: 
-        bot_running = True
-        bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʙᴏᴛ ʀᴜɴɴɪɴɢ.</b>")
-    elif '/ping' in message.text: 
-        bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴘᴏɴɢ! sᴘᴇᴇᴅ: ᴇxᴄᴇʟʟᴇɴᴛ</b>")
+    if '/stop' in message.text: bot_running = False; bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʙᴏᴛ sᴛᴏᴘᴘᴇᴅ.</b>")
+    elif '/run' in message.text: bot_running = True; bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʙᴏᴛ ʀᴜɴɴɪɴɢ.</b>")
+    elif '/ping' in message.text: bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴘᴏɴɢ! sᴘᴇᴇᴅ: ᴇxᴄᴇʟʟᴇɴᴛ</b>")
     elif '/ban' in message.text and len(cmd) > 1:
         banned_col.update_one({"user_id": int(cmd[1])}, {"$set": {"user_id": int(cmd[1])}}, upsert=True)
         bot.reply_to(message, f"<b>ᴀᴅᴅᴇᴅ: ᴜsᴇʀ {cmd[1]} ʙᴀɴɴᴇᴅ.</b>")
@@ -243,4 +229,6 @@ def owner_actions(message):
 if __name__ == "__main__":
     keep_alive()
     print("Bot is starting with Auto-Delete System...")
-    bot.infinity_polling(timeout=60, long_polling_timeout=20)
+    # Error fix: Remove webhook and old polling conflict
+    bot.remove_webhook()
+    bot.infinity_polling(skip_pending=True)
