@@ -45,11 +45,18 @@ bot_running = True
 # --- HELPERS ---
 def is_subscribed(user_id):
     try:
+        # Check Channel Status
         status1 = bot.get_chat_member(CHANNEL_ID, user_id).status
+        # Check Group Status
         status2 = bot.get_chat_member(GROUP_ID, user_id).status
-        allowed = ['member', 'administrator', 'creator', 'restricted']
-        return status1 in allowed and status2 in allowed
-    except: return False
+        
+        # Valid statuses to confirm user is in the chat
+        active_status = ['member', 'administrator', 'creator', 'restricted']
+        
+        return (status1 in active_status) and (status2 in active_status)
+    except Exception as e:
+        print(f"Sub Check Error: {e}")
+        return False
 
 def parse_broadcast_text(text):
     pattern = r"\[([^|]+)\|([^\]]+)\]"
@@ -229,6 +236,6 @@ def owner_actions(message):
 if __name__ == "__main__":
     keep_alive()
     print("Bot is starting with Auto-Delete System...")
-    # Error fix: Remove webhook and old polling conflict
+    # Fix for Conflict 409 and Webhook issues
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True)
