@@ -42,30 +42,23 @@ banned_col = db['banned']
 bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
 bot_running = True
 
-# --- FIXED HELPERS ---
+# --- HELPERS ---
 def is_subscribed(user_id):
     try:
-        # স্ট্যাটাস চেক করার জন্য মেম্বার অবজেক্ট নেওয়া
         status1 = bot.get_chat_member(CHANNEL_ID, user_id).status
         status2 = bot.get_chat_member(GROUP_ID, user_id).status
-        
-        # বৈধ স্ট্যাটাস লিস্ট (left বা kicked থাকা যাবে না)
         active_status = ['member', 'administrator', 'creator', 'restricted']
-        
         return (status1 in active_status) and (status2 in active_status)
-    except Exception as e:
-        print(f"Subscription error: {e}")
+    except:
         return False
 
 def parse_broadcast_text(text):
     pattern = r"\[([^|]+)\|([^\]]+)\]"
     buttons = re.findall(pattern, text)
     clean_text = re.sub(pattern, "", text).strip()
-    
     markup = types.InlineKeyboardMarkup()
     for name, url in buttons:
         markup.add(types.InlineKeyboardButton(text=name.strip(), url=url.strip()))
-    
     return clean_text, markup if buttons else None
 
 # --- AUTO DELETE TIMER LOGIC ---
@@ -77,30 +70,18 @@ def countdown_timer(chat_id, message_id, original_text, mention_name):
         try:
             new_footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: {stylish_sec}𝗌"
             bot.edit_message_text(original_text + new_footer, chat_id, message_id, parse_mode="HTML")
-        except:
-            break
-    
+        except: break
     time.sleep(5)
-    try:
-        bot.delete_message(chat_id, message_id)
-    except:
-        pass
+    try: bot.delete_message(chat_id, message_id)
+    except: pass
 
 # --- DATABASE SYNC ---
 def register_user(message):
     user_id = message.from_user.id
     username = message.from_user.username or "N/A"
     first_name = message.from_user.first_name or "User"
-    
     if not users_col.find_one({"user_id": user_id}):
-        users_col.insert_one({
-            "user_id": user_id,
-            "username": username,
-            "name": first_name,
-            "usage_count": 0,
-            "last_use": 0
-        })
-    
+        users_col.insert_one({"user_id": user_id, "username": username, "name": first_name, "usage_count": 0, "last_use": 0})
     if message.chat.type in ['group', 'supergroup']:
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
@@ -133,23 +114,37 @@ def info_fetch(message):
     if not bot_running: return
     uid = message.from_user.id
     
+    if message.chat.type == 'private':
+        if not is_subscribed(uid):
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            btn1 = types.InlineKeyboardButton("ᴊᴏɪɴ ɢʀᴏᴜᴘ", url=f"https://t.me/{GROUP_ID.replace('@','')}")
+            btn2 = types.InlineKeyboardButton("ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ", url=f"https://t.me/{CHANNEL_ID.replace('@','')}")
+            btn3 = types.InlineKeyboardButton("ᴄʜᴇᴄᴋ sᴛᴀᴛᴜs", callback_data="check_verify")
+            markup.add(btn1, btn2, btn3)
+            return bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟs ғɪʀsᴛ!</b>", reply_markup=markup)
+        else:
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ", url=f"https://t.me/{bot.get_me().username}?startgroup=true"))
+            return bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴏɴʟʏ ᴡᴏʀᴋs ɪɴ ɢʀᴏᴜᴘs!</b>", reply_markup=markup)
+
+    # Group member check
+    try:
+        members_count = bot.get_chat_member_count(message.chat.id)
+        if members_count < 50:
+            bot.send_message(message.chat.id, "<b>ᴀᴅᴅᴇᴅ: ᴛʜɪs ɢʀᴏᴜᴘ ʜᴀs ʟᴇss ᴛʜᴀɴ 𝟻𝟶 ᴍᴇᴍʙᴇʀs. ʙᴏᴛ ɪs ʟᴇᴀᴠɪɴɢ!</b>")
+            bot.leave_chat(message.chat.id)
+            return
+    except: pass
+
     if banned_col.find_one({"user_id": uid}): return
-    
-    if not is_subscribed(uid):
-        markup = types.InlineKeyboardMarkup(row_width=2)
-        btn1 = types.InlineKeyboardButton("ᴊᴏɪɴ ɢʀᴏᴜᴘ", url=f"https://t.me/{GROUP_ID.replace('@','')}")
-        btn2 = types.InlineKeyboardButton("ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ", url=f"https://t.me/{CHANNEL_ID.replace('@','')}")
-        markup.add(btn1, btn2)
-        return bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟs ғɪʀsᴛ!</b>", reply_markup=markup)
+    if not is_subscribed(uid): return bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟs ᴛᴏ ᴜsᴇ ᴍᴇ ɪɴ ɢʀᴏᴜᴘ!</b>")
 
     user_data = users_col.find_one({"user_id": uid})
     now = time.time()
-    
     if now - user_data.get('last_use', 0) < 3600 and user_data.get('usage_count', 0) >= 10:
         return bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʟɪᴍɪᴛ ᴇxᴄᴇᴇᴅᴇᴅ! ᴛʀʏ ᴀɢᴀɪɴ ᴀғᴛᴇʀ 1 ʜᴏᴜʀ.</b>")
     
-    new_count = 1 if now - user_data.get('last_use', 0) >= 3600 else user_data.get('usage_count', 0) + 1
-    users_col.update_one({"user_id": uid}, {"$set": {"usage_count": new_count, "last_use": now}})
+    users_col.update_one({"user_id": uid}, {"$set": {"usage_count": (user_data.get('usage_count', 0) + 1 if now - user_data.get('last_use', 0) < 3600 else 1), "last_use": now}})
 
     text = message.text.split()
     if len(text) < 2: return bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴜsᴀɢᴇ:</b> <code>/num 9876543210</code>")
@@ -162,80 +157,85 @@ def info_fetch(message):
         
         results = res['data']['result']
         mention_name = f"<a href='tg://user?id={uid}'>{message.from_user.first_name}</a>"
+        full_response = f"<b>ᴀᴅᴅᴇᴅ ɪɴғᴏ ғᴏʀ:</b> <code>{num}</code>\n"
         
-        for item in results:
-            response = f"<b>ᴀᴅᴅᴇᴅ ɪɴғᴏ ғᴏʀ:</b> <code>{num}</code>\n"
-            response += "━━━━━━━━━━━━━━━━━━\n"
-            response += f"👤 <b>ɴᴀᴍᴇ:</b> <code>{item.get('name') or 'N/A'}</code>\n"
-            response += f"👴 <b>ғᴀᴛʜᴇʀ:</b> <code>{item.get('father_name') or 'N/A'}</code>\n"
-            response += f"📱 <b>ᴍᴏʙɪʟᴇ:</b> <code>{item.get('mobile') or 'N/A'}</code>\n"
-            response += f"📞 <b>ᴀʟᴛ:</b> <code>{item.get('alt_mobile') or 'N/A'}</code>\n"
-            response += f"🆔 <b>ɪᴅ:</b> <code>{item.get('id_number') or 'N/A'}</code>\n"
-            response += f"🏢 <b>ᴄɪʀᴄʟᴇ:</b> <code>{item.get('circle') or 'N/A'}</code>\n"
-            response += f"📧 <b>ᴇᴍᴀɪʟ:</b> <code>{item.get('email') or 'N/A'}</code>\n"
-            response += f"📍 <b>ᴀᴅᴅʀᴇss:</b> <code>{item.get('address') or 'N/A'}</code>\n"
-            response += "━━━━━━━━━━━━━━━━━━\n"
-            response += f"<blockquote>ɴᴏᴛᴇ: ᴄᴏᴅᴇ–ɪɴꜰᴏ\nᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx\nsᴏᴜʀᴄᴇ: @termuxcodex</blockquote>"
+        for idx, item in enumerate(results, 1):
+            full_response += f"\n<b>ʀᴇᴄᴏʀᴅ {idx}</b>\n━━━━━━━━━━━━━━━━━━\n"
+            full_response += f"👤 <b>ɴᴀᴍᴇ:</b> <code>{item.get('name') or 'N/A'}</code>\n"
+            full_response += f"👴 <b>ғᴀᴛʜᴇʀ:</b> <code>{item.get('father_name') or 'N/A'}</code>\n"
+            full_response += f"📱 <b>ᴍᴏʙɪʟᴇ:</b> <code>{item.get('mobile') or 'N/A'}</code>\n"
+            full_response += f"📞 <b>ᴀʟᴛ:</b> <code>{item.get('alt_mobile') or 'N/A'}</code>\n"
+            full_response += f"🆔 <b>ɪᴅ:</b> <code>{item.get('id_number') or 'N/A'}</code>\n"
+            full_response += f"🏢 <b>ᴄɪʀᴄʟᴇ:</b> <code>{item.get('circle') or 'N/A'}</code>\n"
+            full_response += f"📧 <b>ᴇᴍᴀɪʟ:</b> <code>{item.get('email') or 'N/A'}</code>\n"
+            full_response += f"📍 <b>ᴀᴅᴅʀᴇss:</b> <code>{item.get('address') or 'N/A'}</code>\n"
+            full_response += "━━━━━━━━━━━━━━━━━━\n"
+        
+        full_response += f"<blockquote>ɴᴏᴛᴇ: ᴄᴏᴅᴇ–ɪɴꜰᴏ\nᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx\nsᴏᴜʀᴄᴇ: @termuxcodex</blockquote>"
+        footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: 𝟦𝟢ꜱ"
+        sent_msg = bot.send_message(message.chat.id, full_response + footer)
+        threading.Thread(target=countdown_timer, args=(message.chat.id, sent_msg.message_id, full_response, mention_name)).start()
             
-            footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: 𝟦𝟢ꜱ"
-            sent_msg = bot.send_message(message.chat.id, response + footer)
-            
-            threading.Thread(target=countdown_timer, args=(message.chat.id, sent_msg.message_id, response, mention_name)).start()
-            time.sleep(1)
-            
-    except Exception as e:
-        bot.reply_to(message, f"<b>ᴄᴏᴅᴇx: ᴇʀʀᴏʀ!</b>")
+    except: bot.reply_to(message, f"<b>ᴄᴏᴅᴇx: ᴇʀʀᴏʀ!</b>")
 
 # --- OWNER CONTROLS ---
-@bot.message_handler(commands=['id'], func=lambda m: m.from_user.id in OWNER_IDS)
-def send_user_list(message):
-    all_users = users_col.find()
-    file_content = "ID | Username | Name\n" + "-"*35 + "\n"
-    for u in all_users:
-        file_content += f"{u['user_id']} | @{u.get('username','N/A')} | {u.get('name','User')}\n"
-    
-    filename = "bot_users.txt"
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(file_content)
-    
-    with open(filename, "rb") as f:
-        bot.send_document(message.chat.id, f, caption="<b>ᴀᴅᴅᴇᴅ: ʙᴏᴛ ᴜsᴇʀs ʟɪsᴛ</b>")
-    os.remove(filename)
-
 @bot.message_handler(commands=['broadcast'], func=lambda m: m.from_user.id in OWNER_IDS)
 def broadcast_manager(message):
-    raw_text = message.text.replace("/broadcast", "").strip()
-    if not raw_text: return bot.reply_to(message, "<b>ᴜsᴀɢᴇ:</b> /broadcast ᴛᴇxᴛ [ʙᴛɴ ɴᴀᴍᴇ | URL]")
+    msg_parts = message.text.split(maxsplit=1)
+    if len(msg_parts) < 2 and not message.reply_to_message:
+        info_text = "<b>ᴜsᴀɢᴇ:</b> /broadcast ᴛᴇxᴛ [ʙᴛɴ | URL]\n\n"
+        info_text += "<b>sᴛʏʟᴇ ɢᴜɪᴅᴇ:</b>\n"
+        info_text += "<code>&lt;b&gt;bold&lt;/b&gt;</code>\n"
+        info_text += "<code>&lt;code&gt;monospace&lt;/code&gt;</code>\n"
+        info_text += "<code>[Button Name | https://url.com]</code>"
+        return bot.reply_to(message, info_text)
+
+    raw_text = msg_parts[1] if len(msg_parts) > 1 else ""
+    markup = None
+    photo = None
+
+    if message.reply_to_message:
+        if message.reply_to_message.photo:
+            photo = message.reply_to_message.photo[-1].file_id
+            raw_text = raw_text or message.reply_to_message.caption or ""
+        else:
+            raw_text = raw_text or message.reply_to_message.text or ""
 
     clean_msg, markup = parse_broadcast_text(raw_text)
-    users = users_col.find(); groups = groups_col.find()
+    
+    users = list(users_col.find()); groups = list(groups_col.find())
     count = 0
-    for u in users:
-        try: bot.send_message(u['user_id'], clean_msg, reply_markup=markup); count += 1
-        except: pass
-    for g in groups:
-        try: bot.send_message(g['chat_id'], clean_msg, reply_markup=markup); count += 1
+    for target in users + groups:
+        tid = target.get('user_id') or target.get('chat_id')
+        try:
+            if photo: bot.send_photo(tid, photo, caption=clean_msg, reply_markup=markup)
+            else: bot.send_message(tid, clean_msg, reply_markup=markup)
+            count += 1
+            time.sleep(0.1)
         except: pass
     bot.reply_to(message, f"<b>ᴀᴅᴅᴇᴅ: ʙʀᴏᴀᴅᴄᴀsᴛ sᴜᴄᴄᴇssғᴜʟ ᴛᴏ {count} ᴛᴀʀɢᴇᴛs.</b>")
 
-@bot.message_handler(commands=['stop', 'run', 'ping', 'ban', 'unban'], func=lambda m: m.from_user.id in OWNER_IDS)
+@bot.message_handler(commands=['id', 'stop', 'run', 'ping', 'ban', 'unban'], func=lambda m: m.from_user.id in OWNER_IDS)
 def owner_actions(message):
     global bot_running
     cmd = message.text.split()
-    if '/stop' in message.text: bot_running = False; bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʙᴏᴛ sᴛᴏᴘᴘᴇᴅ.</b>")
-    elif '/run' in message.text: bot_running = True; bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʙᴏᴛ ʀᴜɴɴɪɴɢ.</b>")
-    elif '/ping' in message.text: bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴘᴏɴɢ! sᴘᴇᴇᴅ: ᴇxᴄᴇʟʟᴇɴᴛ</b>")
+    if '/id' in message.text:
+        all_u = users_col.find()
+        content = "ID | Username\n" + "\n".join([f"{u['user_id']} | @{u.get('username','N/A')}" for u in all_u])
+        with open("users.txt", "w") as f: f.write(content)
+        with open("users.txt", "rb") as f: bot.send_document(message.chat.id, f)
+        os.remove("users.txt")
+    elif '/stop' in message.text: bot_running = False; bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: sᴛᴏᴘᴘᴇᴅ.</b>")
+    elif '/run' in message.text: bot_running = True; bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ʀᴜɴɴɪɴɢ.</b>")
+    elif '/ping' in message.text: bot.reply_to(message, "<b>ᴀᴅᴅᴇᴅ: ᴘᴏɴɢ!</b>")
     elif '/ban' in message.text and len(cmd) > 1:
         banned_col.update_one({"user_id": int(cmd[1])}, {"$set": {"user_id": int(cmd[1])}}, upsert=True)
-        bot.reply_to(message, f"<b>ᴀᴅᴅᴇᴅ: ᴜsᴇʀ {cmd[1]} ʙᴀɴɴᴇᴅ.</b>")
+        bot.reply_to(message, f"<b>ᴀᴅᴅᴇᴅ: ʙᴀɴɴᴇᴅ {cmd[1]}</b>")
     elif '/unban' in message.text and len(cmd) > 1:
         banned_col.delete_one({"user_id": int(cmd[1])})
-        bot.reply_to(message, f"<b>ᴀᴅᴅᴇᴅ: ᴜsᴇʀ {cmd[1]} ᴜɴʙᴀɴɴᴇᴅ.</b>")
+        bot.reply_to(message, f"<b>ᴀᴅᴅᴇᴅ: ᴜɴʙᴀɴɴᴇᴅ {cmd[1]}</b>")
 
 if __name__ == "__main__":
     keep_alive()
-    print("Bot is starting...")
-    # Render এর জন্য 409 Conflict দূর করার কমান্ড
     bot.remove_webhook()
-    # আগের পেন্ডিং মেসেজ এড়িয়ে চলা
     bot.infinity_polling(skip_pending=True)
