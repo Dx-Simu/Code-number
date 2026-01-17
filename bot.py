@@ -177,17 +177,21 @@ def info_fetch(message):
     try:
         sent_wait = bot.reply_to(message, "<b>🔍 sᴇᴀʀᴄʜɪɴɢ...</b>")
         
-        # --- ORIGINAL API REQUEST METHOD ---
-        response = requests.get(f"{API_URL}{cleaned_num}")
+        # --- FIXED API REQUEST ---
+        # User-Agent যোগ করা হয়েছে কারণ অনেক সময় API বট রিকোয়েস্ট ব্লক করে দেয়
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(f"{API_URL}{cleaned_num}", headers=headers, timeout=20)
         res = response.json()
         
         bot.delete_message(message.chat.id, sent_wait.message_id)
 
-        # ডাটা চেক (প্রথম কোডের মতো সহজ রাখা হয়েছে)
-        if not res.get("data") or not res['data'].get('result'):
-            return bot.reply_to(message, f"<b>😔 sᴏʀʀʏ! ɴᴏ ᴅᴀᴛᴀ ғᴏᴜɴᴅ ғᴏʀ</b> <code>{cleaned_num}</code>")
+        # ডাটা চেক করার আরও শক্তিশালী লজিক
+        data_part = res.get("data", {})
+        results = data_part.get("result", []) if isinstance(data_part, dict) else []
 
-        results = res['data']['result']
+        if not results:
+            return bot.reply_to(message, f"<b>😔 sᴏʀʀʏ! ɴᴏ ᴅᴀᴛᴀ ғᴏᴜɴᴅ ғᴏʀ</b> <code>{cleaned_num}</code>\nᴏᴜʀ ᴅᴀᴛᴀʙᴀsᴇ ᴅᴏᴇsɴ'ᴛ ʜᴀᴠᴇ ɪɴғᴏ ᴏɴ ᴛʜɪs ɴᴜᴍʙᴇʀ.")
+
         mention_name = f"<a href='tg://user?id={uid}'>{message.from_user.first_name}</a>"
         is_ban = "Yes" if banned_col.find_one({"user_id": uid}) else "No"
         
@@ -212,7 +216,7 @@ def info_fetch(message):
             full_response += f"📍 <b>ᴀᴅᴅʀᴇss:</b> <code>{item.get('address') or 'N/A'}</code>\n━━━━━━━━━━━━━━━━━━\n"
         
         full_response += f"<blockquote>ᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx | @termuxcodex</blockquote>"
-        footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: 𝟦𝟢ꜱ"
+        footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: {str(40).replace('0','𝟢').replace('4','𝟦')}ꜱ"
         
         sent_msg = bot.reply_to(message, full_response + footer)
         
@@ -220,7 +224,7 @@ def info_fetch(message):
         threading.Thread(target=countdown_timer, args=(message.chat.id, sent_msg.message_id, full_response, mention_name)).start()
 
     except Exception as e:
-        bot.reply_to(message, "<b>❌ API Error!</b>")
+        bot.reply_to(message, "<b>❌ ᴀᴘɪ ᴇʀʀᴏʀ ᴏʀ ᴛɪᴍᴇᴏᴜᴛ!</b>")
 
 # --- BROADCAST ---
 @bot.message_handler(commands=['broadcast'], func=lambda m: m.from_user.id in OWNER_IDS)
