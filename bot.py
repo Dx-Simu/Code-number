@@ -62,10 +62,10 @@ def parse_broadcast_text(text):
     return clean_text, (markup if buttons else None)
 
 def clean_number(num_str):
-    # সব স্পেস এবং এক্সট্রা ক্যারেক্টার সরানো
-    num_str = re.sub(r'\D', '', num_str) 
-    # +91 বা 91 দিয়ে শুরু হলে চেক
-    if num_str.startswith("91") and len(num_str) > 10:
+    # শুধু সংখ্যাগুলো ফিল্টার করা
+    num_str = re.sub(r'\D', '', num_str)
+    # যদি ১০ ডিজিটের বেশি হয় এবং শুরুতে ৯১ থাকে
+    if len(num_str) > 10 and num_str.startswith("91"):
         return "PLUS_91_FOUND"
     return num_str
 
@@ -125,23 +125,18 @@ def start(message):
         markup = types.InlineKeyboardMarkup()
         btn_add = types.InlineKeyboardButton("➕ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ", url=f"https://t.me/{bot.get_me().username}?startgroup=true")
         markup.add(btn_add)
-        bot.reply_to(message, f"<b>👋 ʜᴇʟʟᴏ {message.from_user.first_name}!</b>\n\nɪ ᴀᴍ ᴀʟɪᴠᴇ ᴀɴᴅ ʀᴇᴀᴅʏ. ᴘʟᴇᴀsᴇ ᴀᴅᴅ ᴍᴇ ᴛᴏ ᴀ ɢʀᴏᴜᴘ ᴛᴏ ᴜsᴇ ɴᴜᴍʙᴇʀ ɪɴғᴏ sᴇᴀʀᴄʜ.", reply_markup=markup)
+        bot.reply_to(message, f"<b>👋 ʜᴇʟʟᴏ {message.from_user.first_name}!</b>\n\nɪ ᴀᴍ ᴀʟɪᴠᴇ ᴀɴᴅ ʀᴇᴀᴅʏ. ᴀᴅᴅ ᴍᴇ ᴛᴏ ᴀ ɢʀᴏᴜᴘ ᴛᴏ sᴇᴀʀᴄʜ ɴᴜᴍʙᴇʀs.", reply_markup=markup)
     else:
-        bot.reply_to(message, "<b>✅ ʙᴏᴛ ɪs ᴀᴄᴛɪᴠᴇ!</b>\n\nᴘʟᴇᴀsᴇ ᴜsᴇ: <code>/num 9876543210</code> ᴛᴏ ɢᴇᴛ ᴅᴇᴛᴀɪʟs.")
+        bot.reply_to(message, "<b>✅ ʙᴏᴛ ɪs ᴀᴄᴛɪᴠᴇ!</b>\n\nᴜsᴇ: <code>/num 9876543210</code>")
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_verify")
 def verify(call):
     if is_subscribed(call.from_user.id):
-        bot.answer_callback_query(call.id, "✅ Verified Successfully!", show_alert=False)
+        bot.answer_callback_query(call.id, "✅ Verified!", show_alert=False)
         bot.delete_message(call.message.chat.id, call.message.message_id)
-        if call.message.chat.type == 'private':
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("➕ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ", url=f"https://t.me/{bot.get_me().username}?startgroup=true"))
-            bot.send_message(call.message.chat.id, "<b>✅ ᴠᴇʀɪғɪᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b>", reply_markup=markup)
-        else:
-            bot.send_message(call.message.chat.id, "<b>✅ ᴠᴇʀɪғɪᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b>\nᴜsᴇ: <code>/num ɴᴜᴍʙᴇʀ</code>")
+        bot.send_message(call.message.chat.id, "<b>✅ ᴠᴇʀɪғɪᴇᴅ!</b> ʏᴏᴜ ᴄᴀɴ ᴜsᴇ ᴛʜᴇ ʙᴏᴛ ɴᴏᴡ.")
     else:
-        bot.answer_callback_query(call.id, "❌ ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟs ғɪʀsᴛ!", show_alert=True)
+        bot.answer_callback_query(call.id, "❌ ᴊᴏɪɴ ᴛʜᴇ ᴄʜᴀɴɴᴇʟs ғɪʀsᴛ!", show_alert=True)
 
 @bot.message_handler(commands=['num'])
 def info_fetch(message):
@@ -173,10 +168,10 @@ def info_fetch(message):
     cleaned_num = clean_number(raw_num)
 
     if cleaned_num == "PLUS_91_FOUND":
-        return bot.reply_to(message, "<b>⚠️ ᴅᴏ ɴᴏᴛ ᴜsᴇ +𝟿𝟷 ᴏʀ 𝟿𝟷.</b>\nɢɪᴠᴇ 𝟷𝟶 ᴅɪɢɪᴛ ɴᴜᴍʙᴇʀ.")
+        return bot.reply_to(message, "<b>⚠️ ᴇʀʀᴏʀ: ᴅᴏ ɴᴏᴛ ᴜsᴇ +𝟿𝟷 ᴏʀ 𝟿𝟷.</b>\nɢɪᴠᴇ 𝟷𝟶 ᴅɪɢɪᴛ ɴᴜᴍʙᴇʀ.")
 
     if len(cleaned_num) != 10:
-        return bot.reply_to(message, "<b>⚠️ ᴘʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴀ ᴠᴀʟɪᴅ 𝟷𝟶 ᴅɪɢɪᴛ ɴᴜᴍʙᴇʀ.</b>")
+        return bot.reply_to(message, "<b>⚠️ ɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ!</b> ᴘʟᴇᴀsᴇ ᴇɴᴛᴇʀ 𝟷𝟶 ᴅɪɢɪᴛs.")
 
     user_data = users_col.find_one({"user_id": uid})
     now = time.time()
@@ -184,20 +179,24 @@ def info_fetch(message):
         return bot.reply_to(message, "<b>🚫 ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ! ᴛʀʏ ᴀғᴛᴇʀ 𝟷 ʜᴏᴜʀ.</b>")
 
     try:
-        sent_wait = bot.reply_to(message, "<b>🔍 sᴇᴀʀᴄʜɪɴɢ... ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ.</b>")
+        sent_wait = bot.reply_to(message, "<b>🔍 sᴇᴀʀᴄʜɪɴɢ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ...</b>")
         
-        # API Request with Headers to avoid blocking
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(f"{API_URL}{cleaned_num}", headers=headers, timeout=15)
+        # API Request with robust settings
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = requests.get(f"{API_URL}{cleaned_num}", headers=headers, timeout=20)
         res = response.json()
         
         bot.delete_message(message.chat.id, sent_wait.message_id)
 
-        # ডাটা চেক করার আরও শক্তিশালী লজিক
-        if not res.get("data") or not res['data'].get('result'):
-            return bot.reply_to(message, f"<b>😔 ɴᴏ ᴅᴀᴛᴀ ғᴏᴜɴᴅ ғᴏʀ</b> <code>{cleaned_num}</code>\nᴛʀʏ ᴀɴᴏᴛʜᴇʀ ɴᴜᴍʙᴇʀ.")
+        # ডাটা চেক করার আরও ফ্লেক্সিবল লজিক
+        data_block = res.get('data', {})
+        results = data_block.get('result', []) if isinstance(data_block, dict) else []
 
-        results = res['data']['result']
+        if not results:
+            return bot.reply_to(message, f"<b>😔 sᴏʀʀʏ! ɴᴏ ᴅᴀᴛᴀ ғᴏᴜɴᴅ ғᴏʀ</b> <code>{cleaned_num}</code>\nᴏᴜʀ ᴅᴀᴛᴀʙᴀsᴇ ᴅᴏᴇsɴ'ᴛ ʜᴀᴠᴇ ɪɴғᴏ.")
+
         mention_name = f"<a href='tg://user?id={uid}'>{message.from_user.first_name}</a>"
         is_ban = "Yes" if banned_col.find_one({"user_id": uid}) else "No"
         
@@ -228,14 +227,15 @@ def info_fetch(message):
         full_response += f"<blockquote>ᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx | @termuxcodex</blockquote>"
         footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: 𝟦𝟢ꜱ"
         
-        # এখানে reply_to ব্যবহার করা হয়েছে যাতে ট্যাগ হয়
         sent_msg = bot.reply_to(message, full_response + footer)
         
+        # আপডেট ডাটাবেস
         users_col.update_one({"user_id": uid}, {"$set": {"usage_count": (user_data.get('usage_count', 0) + 1 if now - user_data.get('last_use', 0) < 3600 else 1), "last_use": now}})
+        
         threading.Thread(target=countdown_timer, args=(message.chat.id, sent_msg.message_id, full_response, mention_name)).start()
 
     except Exception as e:
-        bot.reply_to(message, f"<b>❌ ᴀᴘɪ/sʏsᴛᴇᴍ ᴇʀʀᴏʀ:</b> <code>{str(e)}</code>")
+        bot.reply_to(message, f"<b>❌ ᴇʀʀᴏʀ:</b> <code>API Timeout or Internal Error</code>")
 
 # --- BROADCAST ---
 @bot.message_handler(commands=['broadcast'], func=lambda m: m.from_user.id in OWNER_IDS)
@@ -247,7 +247,7 @@ def broadcast_manager(message):
     
     all_targets = list(set([u['user_id'] for u in users_col.find()] + [g['chat_id'] for g in groups_col.find()]))
     success = 0
-    prog = bot.reply_to(message, "<b>🚀 sᴛᴀʀᴛɪɴɢ...</b>")
+    prog = bot.reply_to(message, "<b>🚀 ʙʀᴏᴀᴅᴄᴀsᴛɪɴɢ...</b>")
 
     for tid in all_targets:
         try:
@@ -256,28 +256,29 @@ def broadcast_manager(message):
             elif msg.video: bot.send_video(tid, msg.video.file_id, caption=clean_msg, reply_markup=markup)
             else: bot.send_message(tid, clean_msg, reply_markup=markup)
             success += 1
-            time.sleep(0.05)
+            time.sleep(0.1)
         except: pass
-    bot.edit_message_text(f"<b>✅ sᴇɴᴛ ᴛᴏ {success} ᴛᴀʀɢᴇᴛs.</b>", message.chat.id, prog.message_id)
+    bot.edit_message_text(f"<b>✅ ʙʀᴏᴀᴅᴄᴀsᴛ ᴅᴏɴᴇ! sᴇɴᴛ ᴛᴏ {success} ᴄʜᴀᴛs.</b>", message.chat.id, prog.message_id)
 
+# --- OWNER ACTIONS ---
 @bot.message_handler(commands=['id', 'stop', 'run', 'ping', 'ban', 'unban'], func=lambda m: m.from_user.id in OWNER_IDS)
 def owner_actions(message):
     global bot_running
     cmd = message.text.split()
     if '/id' in message.text:
         content = "ID | Username\n" + "\n".join([f"{u['user_id']} | @{u.get('username','N/A')}" for u in users_col.find()])
-        with open("u.txt", "w") as f: f.write(content)
-        with open("u.txt", "rb") as f: bot.send_document(message.chat.id, f)
-        os.remove("u.txt")
-    elif '/stop' in message.text: bot_running = False; bot.reply_to(message, "<b>🔴 sᴛᴏᴘᴘᴇᴅ.</b>")
-    elif '/run' in message.text: bot_running = True; bot.reply_to(message, "<b>🟢 ʀᴜɴɴɪɴɢ.</b>")
+        with open("users.txt", "w") as f: f.write(content)
+        with open("users.txt", "rb") as f: bot.send_document(message.chat.id, f)
+        os.remove("users.txt")
+    elif '/stop' in message.text: bot_running = False; bot.reply_to(message, "<b>🔴 ʙᴏᴛ sᴛᴏᴘᴘᴇᴅ.</b>")
+    elif '/run' in message.text: bot_running = True; bot.reply_to(message, "<b>🟢 ʙᴏᴛ ʀᴜɴɴɪɴɢ.</b>")
     elif '/ping' in message.text: bot.reply_to(message, "<b>🏓 ᴘᴏɴɢ!</b>")
     elif '/ban' in message.text and len(cmd) > 1:
         banned_col.update_one({"user_id": int(cmd[1])}, {"$set": {"user_id": int(cmd[1])}}, upsert=True)
-        bot.reply_to(message, "<b>🚫 ʙᴀɴɴᴇᴅ.</b>")
+        bot.reply_to(message, "<b>🚫 ᴜsᴇʀ ʙᴀɴɴᴇᴅ.</b>")
     elif '/unban' in message.text and len(cmd) > 1:
         banned_col.delete_one({"user_id": int(cmd[1])})
-        bot.reply_to(message, "<b>✅ ᴜɴʙᴀɴɴᴇᴅ.</b>")
+        bot.reply_to(message, "<b>✅ ᴜsᴇʀ ᴜɴʙᴀɴɴᴇᴅ.</b>")
 
 if __name__ == "__main__":
     keep_alive()
