@@ -62,10 +62,10 @@ def parse_broadcast_text(text):
     return clean_text, (markup if buttons else None)
 
 def clean_number(num_str):
-    # নাম্বার থেকে সব স্পেস সরিয়ে ফেলা
-    num_str = num_str.replace(" ", "")
-    # +91 থাকলে রিটার্ন করা
-    if num_str.startswith("+91"):
+    # সব স্পেস এবং এক্সট্রা ক্যারেক্টার সরানো
+    num_str = re.sub(r'\D', '', num_str) 
+    # +91 বা 91 দিয়ে শুরু হলে চেক
+    if num_str.startswith("91") and len(num_str) > 10:
         return "PLUS_91_FOUND"
     return num_str
 
@@ -113,36 +113,33 @@ def start(message):
     register_user(message)
     user_id = message.from_user.id
     
-    # জয়েন চেক
     if not is_subscribed(user_id):
         markup = types.InlineKeyboardMarkup(row_width=2)
         btn1 = types.InlineKeyboardButton("ᴊᴏɪɴ ɢʀᴏᴜᴘ", url=f"https://t.me/{GROUP_ID.replace('@','')}")
         btn2 = types.InlineKeyboardButton("ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ", url=f"https://t.me/{CHANNEL_ID.replace('@','')}")
         btn3 = types.InlineKeyboardButton("✅ ᴠᴇʀɪғʏ ᴍᴇ", callback_data="check_verify")
         markup.add(btn1, btn2, btn3)
-        return bot.send_message(message.chat.id, "<b>⚠️ ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ!</b>\n\nʏᴏᴜ ᴍᴜsᴛ ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟ ᴀɴᴅ ɢʀᴏᴜᴘ ᴛᴏ ᴜsᴇ ᴛʜɪs ʙᴏᴛ.", reply_markup=markup)
+        return bot.reply_to(message, "<b>⚠️ ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ!</b>\n\nʏᴏᴜ ᴍᴜsᴛ ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟ ᴀɴᴅ ɢʀᴏᴜᴘ ᴛᴏ ᴜsᴇ ᴛʜɪs ʙᴏᴛ.", reply_markup=markup)
 
-    # জয়েন থাকলে DM vs Group লজিক
     if message.chat.type == 'private':
         markup = types.InlineKeyboardMarkup()
         btn_add = types.InlineKeyboardButton("➕ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ", url=f"https://t.me/{bot.get_me().username}?startgroup=true")
         markup.add(btn_add)
-        bot.send_message(message.chat.id, f"<b>👋 ʜᴇʟʟᴏ {message.from_user.first_name}!</b>\n\nɪ ᴀᴍ ᴀʟɪᴠᴇ ᴀɴᴅ ʀᴇᴀᴅʏ. ᴘʟᴇᴀsᴇ ᴀᴅᴅ ᴍᴇ ᴛᴏ ᴀ ɢʀᴏᴜᴘ ᴛᴏ ᴜsᴇ ɴᴜᴍʙᴇʀ ɪɴғᴏ sᴇᴀʀᴄʜ.", reply_markup=markup)
+        bot.reply_to(message, f"<b>👋 ʜᴇʟʟᴏ {message.from_user.first_name}!</b>\n\nɪ ᴀᴍ ᴀʟɪᴠᴇ ᴀɴᴅ ʀᴇᴀᴅʏ. ᴘʟᴇᴀsᴇ ᴀᴅᴅ ᴍᴇ ᴛᴏ ᴀ ɢʀᴏᴜᴘ ᴛᴏ ᴜsᴇ ɴᴜᴍʙᴇʀ ɪɴғᴏ sᴇᴀʀᴄʜ.", reply_markup=markup)
     else:
-        bot.send_message(message.chat.id, "<b>✅ ʙᴏᴛ ɪs ᴀᴄᴛɪᴠᴇ!</b>\n\nᴘʟᴇᴀsᴇ ᴜsᴇ: <code>/num 9876543210</code> ᴛᴏ ɢᴇᴛ ᴅᴇᴛᴀɪʟs.")
+        bot.reply_to(message, "<b>✅ ʙᴏᴛ ɪs ᴀᴄᴛɪᴠᴇ!</b>\n\nᴘʟᴇᴀsᴇ ᴜsᴇ: <code>/num 9876543210</code> ᴛᴏ ɢᴇᴛ ᴅᴇᴛᴀɪʟs.")
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_verify")
 def verify(call):
     if is_subscribed(call.from_user.id):
         bot.answer_callback_query(call.id, "✅ Verified Successfully!", show_alert=False)
         bot.delete_message(call.message.chat.id, call.message.message_id)
-        # পুনরায় চেক করে মেসেজ আপডেট
         if call.message.chat.type == 'private':
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("➕ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ", url=f"https://t.me/{bot.get_me().username}?startgroup=true"))
-            bot.send_message(call.message.chat.id, "<b>✅ ᴠᴇʀɪғɪᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b>\nʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴜsᴇ ᴛʜᴇ ʙᴏᴛ.", reply_markup=markup)
+            bot.send_message(call.message.chat.id, "<b>✅ ᴠᴇʀɪғɪᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b>", reply_markup=markup)
         else:
-            bot.send_message(call.message.chat.id, "<b>✅ ᴠᴇʀɪғɪᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b>\nᴘʟᴇᴀsᴇ ᴜsᴇ: <code>/num 9876543210</code>")
+            bot.send_message(call.message.chat.id, "<b>✅ ᴠᴇʀɪғɪᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b>\nᴜsᴇ: <code>/num ɴᴜᴍʙᴇʀ</code>")
     else:
         bot.answer_callback_query(call.id, "❌ ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟs ғɪʀsᴛ!", show_alert=True)
 
@@ -152,18 +149,18 @@ def info_fetch(message):
     if not bot_running: return
     uid = message.from_user.id
     
-    # গ্রুপ মেম্বার চেক (৫২ জনের কম হলে লিভ)
+    # গ্রুপ মেম্বার চেক
     if message.chat.type in ['group', 'supergroup']:
         try:
-            members_count = bot.get_chat_member_count(message.chat.id)
-            if members_count < 50:
-                bot.send_message(message.chat.id, "<b>⚠️ ᴀᴅᴅᴇᴅ: ᴛʜɪs ɢʀᴏᴜᴘ ʜᴀs ʟᴇss ᴛʜᴀɴ 𝟻𝟶 ᴍᴇᴍʙᴇʀs. ʙᴏᴛ ɪs ʟᴇᴀᴠɪɴɢ!</b>")
+            count = bot.get_chat_member_count(message.chat.id)
+            if count < 50:
+                bot.reply_to(message, "<b>⚠️ ᴛʜɪs ɢʀᴏᴜᴘ ʜᴀs ʟᴇss ᴛʜᴀɴ 𝟻𝟶 ᴍᴇᴍʙᴇʀs. ʟᴇᴀᴠɪɴɢ...</b>")
                 bot.leave_chat(message.chat.id)
                 return
         except: pass
     
     if not is_subscribed(uid):
-        return bot.reply_to(message, "<b>❌ ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ & ɢʀᴏᴜᴘ ᴛᴏ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ!</b>")
+        return bot.reply_to(message, "<b>❌ ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ & ɢʀᴏᴜᴘ!</b>")
 
     if message.chat.type == 'private':
         return bot.reply_to(message, "<b>❌ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴏɴʟʏ ᴡᴏʀᴋs ɪɴ ɢʀᴏᴜᴘs!</b>")
@@ -172,56 +169,57 @@ def info_fetch(message):
     if len(text) < 2: 
         return bot.reply_to(message, "<b>⚠️ ᴜsᴀɢᴇ:</b> <code>/num 9876543210</code>")
 
-    raw_num = " ".join(text[1:])
+    raw_num = "".join(text[1:])
     cleaned_num = clean_number(raw_num)
 
     if cleaned_num == "PLUS_91_FOUND":
-        return bot.reply_to(message, "<b>⚠️ ᴇʀʀᴏʀ: ᴅᴏ ɴᴏᴛ ᴜsᴇ +𝟿𝟷.</b>\nᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴏɴʟʏ 𝟷𝟶 ᴅɪɢɪᴛ ɴᴜᴍʙᴇʀ.")
+        return bot.reply_to(message, "<b>⚠️ ᴅᴏ ɴᴏᴛ ᴜsᴇ +𝟿𝟷 ᴏʀ 𝟿𝟷.</b>\nɢɪᴠᴇ 𝟷𝟶 ᴅɪɢɪᴛ ɴᴜᴍʙᴇʀ.")
 
-    if len(cleaned_num) != 10 or not cleaned_num.isdigit():
-        return bot.reply_to(message, "<b>⚠️ ɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ!</b>\nᴘʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴀ ᴠᴀʟɪᴅ 𝟷𝟶 ᴅɪɢɪᴛ ᴍᴏʙɪʟᴇ ɴᴜᴍʙᴇʀ.")
+    if len(cleaned_num) != 10:
+        return bot.reply_to(message, "<b>⚠️ ᴘʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴀ ᴠᴀʟɪᴅ 𝟷𝟶 ᴅɪɢɪᴛ ɴᴜᴍʙᴇʀ.</b>")
 
-    # লিমিট চেক
     user_data = users_col.find_one({"user_id": uid})
     now = time.time()
     if now - user_data.get('last_use', 0) < 3600 and user_data.get('usage_count', 0) >= 10:
-        return bot.reply_to(message, "<b>🚫 ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ! ᴛʀʏ ᴀɢᴀɪɴ ᴀғᴛᴇʀ 𝟷 ʜᴏᴜʀ.</b>")
+        return bot.reply_to(message, "<b>🚫 ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ! ᴛʀʏ ᴀғᴛᴇʀ 𝟷 ʜᴏᴜʀ.</b>")
 
     try:
-        sent_wait = bot.reply_to(message, "<b>🔍 sᴇᴀʀᴄʜɪɴɢ ᴅᴀᴛᴀʙᴀsᴇ...</b>")
-        res = requests.get(f"{API_URL}{cleaned_num}").json()
+        sent_wait = bot.reply_to(message, "<b>🔍 sᴇᴀʀᴄʜɪɴɢ... ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ.</b>")
+        
+        # API Request with Headers to avoid blocking
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(f"{API_URL}{cleaned_num}", headers=headers, timeout=15)
+        res = response.json()
+        
         bot.delete_message(message.chat.id, sent_wait.message_id)
 
-        if not res.get("success") or not res.get('data', {}).get('result'):
-            return bot.reply_to(message, f"<b>😔 sᴏʀʀʏ! ɴᴏ ᴅᴀᴛᴀ ғᴏᴜɴᴅ ғᴏʀ</b> <code>{cleaned_num}</code>\nᴏᴜʀ ᴅᴀᴛᴀʙᴀsᴇ ᴅᴏᴇsɴ'ᴛ ʜᴀᴠᴇ ɪɴғᴏ ᴏɴ ᴛʜɪs ɴᴜᴍʙᴇʀ.")
+        # ডাটা চেক করার আরও শক্তিশালী লজিক
+        if not res.get("data") or not res['data'].get('result'):
+            return bot.reply_to(message, f"<b>😔 ɴᴏ ᴅᴀᴛᴀ ғᴏᴜɴᴅ ғᴏʀ</b> <code>{cleaned_num}</code>\nᴛʀʏ ᴀɴᴏᴛʜᴇʀ ɴᴜᴍʙᴇʀ.")
 
         results = res['data']['result']
         mention_name = f"<a href='tg://user?id={uid}'>{message.from_user.first_name}</a>"
-        
         is_ban = "Yes" if banned_col.find_one({"user_id": uid}) else "No"
         
-        # ইউজার ডাটা হেডার
         user_info = (
             f"👤 <b>ᴜsᴇʀ ɪɴғᴏʀᴍᴀᴛɪᴏɴ</b>\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"👤 ɴᴀᴍᴇ: <code>{message.from_user.first_name}</code>\n"
-            f"📧 ᴜsᴇʀɴᴀᴍᴇ: @{message.from_user.username or 'N/A'}\n"
             f"🆔 ɪᴅ: <code>{uid}</code>\n"
             f"🌐 ɢʀᴏᴜᴘ ɪᴅ: <code>{message.chat.id}</code>\n"
-            f"🚫 ʙᴀɴ sᴛᴀᴛᴜs: <code>{is_ban}</code>\n"
+            f"🚫 ʙᴀɴ: <code>{is_ban}</code>\n"
             f"━━━━━━━━━━━━━━━━━━\n\n"
         )
 
         full_response = user_info + f"<b>📱 ᴅᴇᴛᴀɪʟs ғᴏʀ:</b> <code>{cleaned_num}</code>\n"
         
-        # ডাটা ফিল্ডস (আগের সব ফিল্ড যোগ করা হয়েছে)
         for idx, item in enumerate(results, 1):
             full_response += f"\n<b>ʀᴇᴄᴏʀᴅ {idx}</b>\n━━━━━━━━━━━━━━━━━━\n"
             full_response += f"👤 <b>ɴᴀᴍᴇ:</b> <code>{item.get('name') or 'N/A'}</code>\n"
             full_response += f"👴 <b>ғᴀᴛʜᴇʀ:</b> <code>{item.get('father_name') or 'N/A'}</code>\n"
             full_response += f"📱 <b>ᴍᴏʙɪʟᴇ:</b> <code>{item.get('mobile') or 'N/A'}</code>\n"
-            full_response += f"📞 <b>ᴀʟᴛ ᴍᴏʙɪʟᴇ:</b> <code>{item.get('alt_mobile') or 'N/A'}</code>\n"
-            full_response += f"🆔 <b>ɪᴅ ɴᴜᴍʙᴇʀ:</b> <code>{item.get('id_number') or 'N/A'}</code>\n"
+            full_response += f"📞 <b>ᴀʟᴛ:</b> <code>{item.get('alt_mobile') or 'N/A'}</code>\n"
+            full_response += f"🆔 <b>ɪᴅ:</b> <code>{item.get('id_number') or 'N/A'}</code>\n"
             full_response += f"🏢 <b>ᴄɪʀᴄʟᴇ:</b> <code>{item.get('circle') or 'N/A'}</code>\n"
             full_response += f"📧 <b>ᴇᴍᴀɪʟ:</b> <code>{item.get('email') or 'N/A'}</code>\n"
             full_response += f"📍 <b>ᴀᴅᴅʀᴇss:</b> <code>{item.get('address') or 'N/A'}</code>\n"
@@ -230,79 +228,56 @@ def info_fetch(message):
         full_response += f"<blockquote>ᴅᴇᴠ: ᴅx–ᴄᴏᴅᴇx | @termuxcodex</blockquote>"
         footer = f"\n\n👤 ᴜꜱᴇʀ: {mention_name}\n⏳ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ: 𝟦𝟢ꜱ"
         
-        sent_msg = bot.send_message(message.chat.id, full_response + footer)
+        # এখানে reply_to ব্যবহার করা হয়েছে যাতে ট্যাগ হয়
+        sent_msg = bot.reply_to(message, full_response + footer)
         
-        # ডাটাবেস আপডেট
         users_col.update_one({"user_id": uid}, {"$set": {"usage_count": (user_data.get('usage_count', 0) + 1 if now - user_data.get('last_use', 0) < 3600 else 1), "last_use": now}})
-        
-        # টাইমার স্টার্ট
         threading.Thread(target=countdown_timer, args=(message.chat.id, sent_msg.message_id, full_response, mention_name)).start()
 
     except Exception as e:
-        bot.reply_to(message, f"<b>❌ ᴇʀʀᴏʀ:</b> <code>{str(e)}</code>")
+        bot.reply_to(message, f"<b>❌ ᴀᴘɪ/sʏsᴛᴇᴍ ᴇʀʀᴏʀ:</b> <code>{str(e)}</code>")
 
-# --- ADVANCED BROADCAST (Image/Doc/Text/Button) ---
+# --- BROADCAST ---
 @bot.message_handler(commands=['broadcast'], func=lambda m: m.from_user.id in OWNER_IDS)
 def broadcast_manager(message):
     msg = message.reply_to_message if message.reply_to_message else message
     msg_parts = message.text.split(maxsplit=1)
-    
-    raw_text = ""
-    if len(msg_parts) > 1:
-        raw_text = msg_parts[1]
-    elif msg.caption:
-        raw_text = msg.caption
-    elif msg.text and not msg.text.startswith('/broadcast'):
-        raw_text = msg.text
-
+    raw_text = msg_parts[1] if len(msg_parts) > 1 else (msg.caption or msg.text or "")
     clean_msg, markup = parse_broadcast_text(raw_text)
     
-    users = list(users_col.find())
-    groups = list(groups_col.find())
-    all_targets = [u.get('user_id') for u in users] + [g.get('chat_id') for g in groups]
-    all_targets = list(set(all_targets)) 
-
+    all_targets = list(set([u['user_id'] for u in users_col.find()] + [g['chat_id'] for g in groups_col.find()]))
     success = 0
-    failed = 0
-    prog_msg = bot.reply_to(message, "<b>🚀 ʙʀᴏᴀᴅᴄᴀsᴛ sᴛᴀʀᴛᴇᴅ...</b>")
+    prog = bot.reply_to(message, "<b>🚀 sᴛᴀʀᴛɪɴɢ...</b>")
 
     for tid in all_targets:
         try:
-            if msg.photo:
-                bot.send_photo(tid, msg.photo[-1].file_id, caption=clean_msg, reply_markup=markup)
-            elif msg.document:
-                bot.send_document(tid, msg.document.file_id, caption=clean_msg, reply_markup=markup)
-            elif msg.video:
-                bot.send_video(tid, msg.video.file_id, caption=clean_msg, reply_markup=markup)
-            else:
-                bot.send_message(tid, clean_msg, reply_markup=markup)
+            if msg.photo: bot.send_photo(tid, msg.photo[-1].file_id, caption=clean_msg, reply_markup=markup)
+            elif msg.document: bot.send_document(tid, msg.document.file_id, caption=clean_msg, reply_markup=markup)
+            elif msg.video: bot.send_video(tid, msg.video.file_id, caption=clean_msg, reply_markup=markup)
+            else: bot.send_message(tid, clean_msg, reply_markup=markup)
             success += 1
             time.sleep(0.05)
-        except:
-            failed += 1
-    
-    bot.edit_message_text(f"<b>✅ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ!</b>\n\n🎯 sᴜᴄᴄᴇss: {success}\n❌ ғᴀɪʟᴇᴅ: {failed}", message.chat.id, prog_msg.message_id)
+        except: pass
+    bot.edit_message_text(f"<b>✅ sᴇɴᴛ ᴛᴏ {success} ᴛᴀʀɢᴇᴛs.</b>", message.chat.id, prog.message_id)
 
-# --- OWNER ACTIONS (KEEPING ALL) ---
 @bot.message_handler(commands=['id', 'stop', 'run', 'ping', 'ban', 'unban'], func=lambda m: m.from_user.id in OWNER_IDS)
 def owner_actions(message):
     global bot_running
     cmd = message.text.split()
     if '/id' in message.text:
-        all_u = users_col.find()
-        content = "ID | Username | Name\n" + "\n".join([f"{u['user_id']} | @{u.get('username','N/A')} | {u.get('name','N/A')}" for u in all_u])
-        with open("users.txt", "w") as f: f.write(content)
-        with open("users.txt", "rb") as f: bot.send_document(message.chat.id, f)
-        os.remove("users.txt")
-    elif '/stop' in message.text: bot_running = False; bot.reply_to(message, "<b>🔴 ʙᴏᴛ sᴛᴏᴘᴘᴇᴅ.</b>")
-    elif '/run' in message.text: bot_running = True; bot.reply_to(message, "<b>🟢 ʙᴏᴛ ɪs ɴᴏᴡ ʀᴜɴɴɪɴɢ.</b>")
+        content = "ID | Username\n" + "\n".join([f"{u['user_id']} | @{u.get('username','N/A')}" for u in users_col.find()])
+        with open("u.txt", "w") as f: f.write(content)
+        with open("u.txt", "rb") as f: bot.send_document(message.chat.id, f)
+        os.remove("u.txt")
+    elif '/stop' in message.text: bot_running = False; bot.reply_to(message, "<b>🔴 sᴛᴏᴘᴘᴇᴅ.</b>")
+    elif '/run' in message.text: bot_running = True; bot.reply_to(message, "<b>🟢 ʀᴜɴɴɪɴɢ.</b>")
     elif '/ping' in message.text: bot.reply_to(message, "<b>🏓 ᴘᴏɴɢ!</b>")
     elif '/ban' in message.text and len(cmd) > 1:
         banned_col.update_one({"user_id": int(cmd[1])}, {"$set": {"user_id": int(cmd[1])}}, upsert=True)
-        bot.reply_to(message, f"<b>🚫 ʙᴀɴɴᴇᴅ {cmd[1]}</b>")
+        bot.reply_to(message, "<b>🚫 ʙᴀɴɴᴇᴅ.</b>")
     elif '/unban' in message.text and len(cmd) > 1:
         banned_col.delete_one({"user_id": int(cmd[1])})
-        bot.reply_to(message, f"<b>✅ ᴜɴʙᴀɴɴᴇᴅ {cmd[1]}</b>")
+        bot.reply_to(message, "<b>✅ ᴜɴʙᴀɴɴᴇᴅ.</b>")
 
 if __name__ == "__main__":
     keep_alive()
